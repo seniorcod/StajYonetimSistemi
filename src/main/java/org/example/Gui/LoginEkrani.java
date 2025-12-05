@@ -34,11 +34,11 @@ public class LoginEkrani extends JFrame {
         formPanel.setBorder(BorderFactory.createEmptyBorder(20, 40, 20, 40));
 
         formPanel.add(new JLabel("E-Posta:"));
-        emailField = new JTextField();
+        emailField = new JTextField("ali.yilmaz@ogr.edu.tr"); // Test için hazır doldurdum
         formPanel.add(emailField);
 
         formPanel.add(new JLabel("Şifre:"));
-        passwordField = new JPasswordField();
+        passwordField = new JPasswordField("12345"); // Test için hazır doldurdum
         formPanel.add(passwordField);
 
         formPanel.add(new JLabel("")); // Boşluk
