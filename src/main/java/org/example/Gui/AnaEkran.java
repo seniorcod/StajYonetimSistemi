@@ -104,6 +104,9 @@ public class AnaEkran extends JFrame {
             // Yeni pencereyi aç ve kullanıcı bilgisini gönder
             new YeniBasvuruEkrani(kullanici).setVisible(true);
         });
+        btnRaporlar.addActionListener(e -> {
+            new RaporEkrani(kullanici).setVisible(true);
+        });
     }
 
     private void initDanismanEkrani() {
