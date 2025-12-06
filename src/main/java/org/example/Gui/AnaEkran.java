@@ -223,6 +223,13 @@ public class AnaEkran extends JFrame {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(new Color(245, 247, 250));
         headerPanel.add(new JLabel("👨‍🏫 Danışman Paneli: " + kullanici.getAdSoyad()), BorderLayout.NORTH);
+
+        // Bilgi Notu
+        JLabel infoLabel = new JLabel("Listede sadece onayınızı veya notlandırmanızı bekleyen aktif işler görünür.");
+        infoLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        infoLabel.setForeground(Color.GRAY);
+        headerPanel.add(infoLabel, BorderLayout.SOUTH);
+
         mainPanel.add(headerPanel, BorderLayout.NORTH);
 
         // --- 2. ORTA KISIM (TABLO) ---
@@ -232,16 +239,16 @@ public class AnaEkran extends JFrame {
             public boolean isCellEditable(int row, int column) { return false; }
         };
 
-        // Filtre: Sadece işi olanları göster
-        // --- GÜNCELLENEN KISIM: SADECE BU DANIŞMANA AİT OLANLARI GETİR ---
+        // --- FİLTRELEME (SADECE İŞİ OLANLARI GÖSTER) ---
         BasvuruDAO dao = new BasvuruDAO();
         // Giriş yapan kullanıcının ID'sini (örn: DAN001) gönderiyoruz
         java.util.List<Basvuru> benimBasvurularim = dao.getBasvurularByDanisman(kullanici.getId());
 
         if (benimBasvurularim != null) {
             for (Basvuru b : benimBasvurularim) {
-                // Burada da yine Şirket Onayı veya Danışman Gönderildi filtresini koruyoruz
-                if (b.getDurum().equals("Şirket Onayladı") || b.getDurum().equals("Danışmana Gönderildi") || b.getDurum().equals("Tamamlandı")) {
+                // DÜZELTME BURADA YAPILDI: "Tamamlandı" SİLİNDİ.
+                // Sadece "Şirket Onayladı" (Başlatma Bekleyen) ve "Danışmana Gönderildi" (Not Bekleyen)
+                if (b.getDurum().equals("Şirket Onayladı") || b.getDurum().equals("Danışmana Gönderildi")) {
                     tableModel.addRow(new Object[]{
                             b.getBasvuruId(), b.getOgrenciAdSoyad(), b.getSirketAd(), b.getPozisyon(), b.getBaslangicTarihi(), b.getDurum()
                     });
@@ -255,11 +262,10 @@ public class AnaEkran extends JFrame {
 
         mainPanel.add(new JScrollPane(table), BorderLayout.CENTER);
 
-        // --- 3. ALT KISIM (YENİ BUTONLAR) ---
+        // --- 3. ALT KISIM (BUTONLAR) ---
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 10));
         bottomPanel.setBackground(new Color(245, 247, 250));
 
-        // İSTEDİĞİN 2 ÖZEL BUTON:
         JButton btnBasvuruIslem = new JButton("✅ Başvuruyu Onayla/Reddet");
         JButton btnStajDegerlendir = new JButton("⚖️ Stajı Değerlendir (Rapor)");
         JButton btnIstatistik = new JButton("📊");
@@ -285,7 +291,7 @@ public class AnaEkran extends JFrame {
         btnCikis.addActionListener(e -> { dispose(); new LoginEkrani().setVisible(true); });
         btnIstatistik.addActionListener(e -> new IstatistikEkrani().setVisible(true));
 
-        // 1. BAŞVURU ONAYLA/REDDET (Sadece 'Şirket Onayladı' ise çalışır)
+        // 1. BAŞVURU ONAYLA/REDDET
         btnBasvuruIslem.addActionListener(e -> {
             int row = table.getSelectedRow();
             if (row == -1) { JOptionPane.showMessageDialog(this, "Seçim yapınız."); return; }
@@ -302,7 +308,9 @@ public class AnaEkran extends JFrame {
 
                     if (stajDao.stajBaslat(basvuruId, yetkiliId, kullanici.getId())) {
                         JOptionPane.showMessageDialog(this, "Staj Başlatıldı!");
-                        new AnaEkran(kullanici).setVisible(true); dispose();
+                        // Ekranı yenilemek için en temiz yol: Mevcut ekranı kapatıp yenisini açmak
+                        new AnaEkran(kullanici).setVisible(true);
+                        dispose();
                     }
                 }
             } else {
@@ -310,7 +318,7 @@ public class AnaEkran extends JFrame {
             }
         });
 
-        // 2. STAJI DEĞERLENDİR (DÜZELTİLMİŞ & YENİLEME ÖZELLİKLİ)
+        // 2. STAJI DEĞERLENDİR
         btnStajDegerlendir.addActionListener(e -> {
             int row = table.getSelectedRow();
             if (row == -1) {
@@ -326,21 +334,20 @@ public class AnaEkran extends JFrame {
                 org.example.DataAccessLayer.StajDAO stajDao = new org.example.DataAccessLayer.StajDAO();
                 String stajId = stajDao.getStajIdByBasvuru(basvuruId);
 
-                // Ekranı oluşturuyoruz
                 StajDegerlendirmeEkrani degerlendirmeEkrani = new StajDegerlendirmeEkrani(stajId, ogrenci, kullanici.getId());
 
-                // KRİTİK EKLEME: Pencere kapandığında Ana Ekranı yenile
+                // Pencere kapandığında Ana Ekranı yenile
                 degerlendirmeEkrani.addWindowListener(new java.awt.event.WindowAdapter() {
                     @Override
                     public void windowClosed(java.awt.event.WindowEvent e) {
-                        // Tabloyu temizle ve yeniden doldur
                         tableModel.setRowCount(0);
                         BasvuruDAO dao = new BasvuruDAO();
-                        java.util.List<Basvuru> guncelListe = dao.tumBasvurulariGetir(); // Veritabanından taze veri çek
+                        // DÜZELTME: Sadece bu danışmana ait olanları çekiyoruz
+                        java.util.List<Basvuru> guncelListe = dao.getBasvurularByDanisman(kullanici.getId());
 
                         if (guncelListe != null) {
                             for (Basvuru b : guncelListe) {
-                                // Sadece işi olanları (Şirket Onaylı veya Danışmana Gönderildi) tekrar listele
+                                // FİLTRE BURADA DA GEÇERLİ: Tamamlananları gösterme
                                 if (b.getDurum().equals("Şirket Onayladı") || b.getDurum().equals("Danışmana Gönderildi")) {
                                     tableModel.addRow(new Object[]{
                                             b.getBasvuruId(), b.getOgrenciAdSoyad(), b.getSirketAd(), b.getPozisyon(), b.getBaslangicTarihi(), b.getDurum()
