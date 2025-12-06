@@ -23,7 +23,23 @@ public class AuthDAO {
         // 3. Şirket Yetkilisi mi?
         kullanici = kontrolEt("sirketyetkilileri", "yetkiliid", "SIRKET", email, password);
 
+        // YENİ KISIM: Eğer giren şirket yetkilisiyse, hangi şirkete bağlı olduğunu bulalım
+        if (kullanici != null && kullanici.getRol().equals("SIRKET")) {
+            String sirketId = getSirketIdByYetkili(kullanici.getId());
+            kullanici.setBagliSirketId(sirketId);
+        }
         return kullanici;
+    }
+    // YENİ METOD: Yetkili ID'den Şirket ID bulur
+    private String getSirketIdByYetkili(String yetkiliId) {
+        String sql = "SELECT sirketid FROM public.sirketyetkilileri WHERE yetkiliid = ?";
+        try (Connection conn = DbHelper.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, yetkiliId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getString("sirketid");
+        } catch (SQLException e) { e.printStackTrace(); }
+        return null;
     }
 
     // Yardımcı Metod (Kod tekrarını önlemek için)
@@ -50,4 +66,5 @@ public class AuthDAO {
         }
         return null;
     }
+
 }

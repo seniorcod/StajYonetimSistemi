@@ -1,18 +1,22 @@
 package org.example.Gui;
 
+import org.example.DataAccessLayer.BasvuruDAO;
+import org.example.Model.Basvuru;
 import org.example.Model.Kullanici;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.util.List;
 
 public class AnaEkran extends JFrame {
 
     private final Kullanici kullanici;
     private DefaultTableModel tableModel;
     private JTable table;
+
+    // Veritabanından çektiğimiz gerçek veriler burada duracak
+    private List<Basvuru> tumBasvurular;
 
     public AnaEkran(Kullanici kullanici) {
         this.kullanici = kullanici;
@@ -21,8 +25,13 @@ public class AnaEkran extends JFrame {
         setTitle("Staj Yönetim Sistemi - Ana Ekran");
         setSize(900, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null); // Ortada aç
+        setLocationRelativeTo(null);
         setLayout(new BorderLayout());
+
+        // --- BACKEND BAĞLANTISI ---
+        // Ekran açılırken senin yazdığın DAO'ya gidip verileri çekiyoruz
+        BasvuruDAO dao = new BasvuruDAO();
+        tumBasvurular = dao.tumBasvurulariGetir();
 
         // Kullanıcı Rolüne Göre Ekranı Hazırla
         if (kullanici.getRol().equalsIgnoreCase("OGRENCI")) {
@@ -34,59 +43,57 @@ public class AnaEkran extends JFrame {
         }
     }
 
-    private void initOgrenciEkrani() {
-        // --- 1. ÜST PANEL (Hoşgeldin Yazısı) ---
+     private void initOgrenciEkrani() {
+        // --- 1. ÜST PANEL ---
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
-        JLabel welcomeLabel = new JLabel("Merhaba, " + kullanici.getAdSoyad());
+        JLabel welcomeLabel = new JLabel("Merhaba, " + kullanici.getAdSoyad() + " (Öğrenci Paneli)");
         welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
         topPanel.add(welcomeLabel);
-
         add(topPanel, BorderLayout.NORTH);
 
-        // --- 2. ORTA PANEL (Tablo - Başvurularım) ---
-        // Tablo Sütun Başlıkları
-        String[] columnNames = {"Başvuru ID", "Şirket", "Pozisyon", "Başlangıç", "Bitiş", "Durum"};
+        // --- 2. ORTA PANEL (Tablo) ---
+        String[] columnNames = {"Başvuru ID", "Şirket", "Pozisyon", "Başlangıç", "Durum"};
 
-        // Tablo Modeli (Verileri tutan kısım)
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) {
-                return false; // Hücrelere çift tıklayıp değiştiremesinler
-            }
+            public boolean isCellEditable(int row, int column) { return false; }
         };
 
-        // SAHTE VERİ (Tasarımı görmek için) - Sonra burayı sileceğiz!
-        tableModel.addRow(new Object[]{"BAS001", "Tekno A.Ş.", "Yazılım Stajyeri", "2026-07-01", "2026-08-15", "Onaylandı"});
-        tableModel.addRow(new Object[]{"BAS002", "Savunma Ltd.", "Sistem Mühendisi", "2026-06-15", "2026-07-30", "Beklemede"});
-        tableModel.addRow(new Object[]{"BAS003", "Oyun Stüdyosu", "Game Developer", "2026-08-01", "2026-09-01", "Reddedildi"});
+        // --- VERİTABANI VERİLERİNİ YÜKLEME ---
+        // Sadece giriş yapan öğrencinin kendi başvurularını listeliyoruz
+        if (tumBasvurular != null) {
+            for (Basvuru b : tumBasvurular) {
+                // İsim eşleşmesiyle filtreliyoruz
+                if (b.getOgrenciAdSoyad().equalsIgnoreCase(kullanici.getAdSoyad())) {
+                    tableModel.addRow(new Object[]{
+                            b.getBasvuruId(),
+                            b.getSirketAd(),
+                            b.getPozisyon(),
+                            b.getBaslangicTarihi(),
+                            b.getDurum()
+                    });
+                }
+            }
+        }
 
         table = new JTable(tableModel);
-        table.setRowHeight(25); // Satır yüksekliği
-        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
-
-        // Tabloyu kaydırılabilir panelin içine koy
+        table.setRowHeight(25);
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createTitledBorder("Başvurularım"));
 
-        // Kenarlardan boşluk bırakalım
         JPanel centerPanel = new JPanel(new BorderLayout());
         centerPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
         centerPanel.add(scrollPane, BorderLayout.CENTER);
-
         add(centerPanel, BorderLayout.CENTER);
 
-        // --- 3. ALT PANEL (Butonlar) ---
+        // --- 3. ALT PANEL (GÜNCELLENMİŞ BUTONLAR) ---
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        bottomPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
+        JButton btnRaporlar = new JButton("Rapor İşlemleri"); // Yeni Buton
         JButton btnYeniBasvuru = new JButton("Yeni Başvuru Yap");
-        JButton btnRaporlar = new JButton("Raporlarım");
         JButton btnCikis = new JButton("Çıkış Yap");
-
-        // Butonlara ikon veya renk verebilirsin (İsteğe bağlı)
-        // btnYeniBasvuru.setBackground(new Color(60, 179, 113)); // Yeşilimsi
 
         bottomPanel.add(btnRaporlar);
         bottomPanel.add(btnYeniBasvuru);
@@ -94,23 +101,32 @@ public class AnaEkran extends JFrame {
 
         add(bottomPanel, BorderLayout.SOUTH);
 
-        // --- BUTON AKSİYONLARI ---
+        // --- AKSİYONLAR ---
         btnCikis.addActionListener(e -> {
-            this.dispose(); // Ekranı kapat
-            new LoginEkrani().setVisible(true); // Giriş ekranına dön
+            this.dispose();
+            new LoginEkrani().setVisible(true);
         });
 
-        btnYeniBasvuru.addActionListener(e -> {
-            // Yeni pencereyi aç ve kullanıcı bilgisini gönder
-            new YeniBasvuruEkrani(kullanici).setVisible(true);
-        });
-        btnRaporlar.addActionListener(e -> {
-            new RaporEkrani(kullanici).setVisible(true);
-        });
+         btnYeniBasvuru.addActionListener(e -> {
+             YeniBasvuruEkrani ekran = new YeniBasvuruEkrani(kullanici);
+
+             // Pencere kapandığını dinleyen "Dinleyici" (Listener) ekliyoruz
+             ekran.addWindowListener(new java.awt.event.WindowAdapter() {
+                 @Override
+                 public void windowClosed(java.awt.event.WindowEvent windowEvent) {
+                     refreshData(); // Pencere kapanınca tabloyu güncelle!
+                 }
+             });
+
+             ekran.setVisible(true);
+         });
+
+        // Rapor Ekranını Aç
+        btnRaporlar.addActionListener(e -> new RaporEkrani(kullanici).setVisible(true));
     }
 
     private void initDanismanEkrani() {
-        // --- 1. ÜST PANEL (Hoşgeldin ve Filtre) ---
+        // --- 1. ÜST PANEL ---
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
@@ -118,118 +134,232 @@ public class AnaEkran extends JFrame {
         welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
         topPanel.add(welcomeLabel, BorderLayout.WEST);
 
-        // Filtreleme Seçeneği
-        String[] filtreler = {"Hepsi", "Beklemede", "Onaylandı", "Reddedildi"};
+        // Filtreleme
+        String[] filtreler = {"Hepsi", "Beklemede", "Onaylandı", "Reddedildi", "Stajda"};
         JComboBox<String> cmbFiltre = new JComboBox<>(filtreler);
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         filterPanel.add(new JLabel("Durum Filtresi:"));
         filterPanel.add(cmbFiltre);
         topPanel.add(filterPanel, BorderLayout.EAST);
-
         add(topPanel, BorderLayout.NORTH);
 
-        // --- 2. ORTA PANEL (Tablo) ---
-        String[] columnNames = {"Başvuru ID", "Öğrenci Adı", "Şirket", "Pozisyon", "Tarih", "Durum"};
+        // --- 2. ORTA PANEL ---
+        String[] columnNames = {"ID", "Öğrenci", "Şirket", "Pozisyon", "Tarih", "Durum"};
 
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
+            public boolean isCellEditable(int row, int column) { return false; }
         };
+
+        // Verileri doldur
+        tabloyuDoldur(tumBasvurular, "Hepsi");
 
         table = new JTable(tableModel);
         table.setRowHeight(25);
-        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
-
         JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Öğrenci Başvuru Listesi"));
+        scrollPane.setBorder(BorderFactory.createTitledBorder("Öğrenci Başvuru Listesi (Canlı Veri)"));
 
         JPanel centerPanel = new JPanel(new BorderLayout());
         centerPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
         centerPanel.add(scrollPane, BorderLayout.CENTER);
-
         add(centerPanel, BorderLayout.CENTER);
 
-        // --- 3. ALT PANEL (Butonlar) ---
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        bottomPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
-        JButton btnDetay = new JButton("Başvuru Detayı / İşlem");
-        JButton btnNotlandir = new JButton("Staj Değerlendir");
+        JButton btnIstatistik = new JButton("📊 İstatistikler"); // <--- YENİ EKLENEN
+        JButton btnDegerlendir = new JButton("Staj Değerlendir");
+        JButton btnDetay = new JButton("İşlem Yap (Onay/Red)");
         JButton btnCikis = new JButton("Çıkış Yap");
 
-        btnDetay.setBackground(new Color(70, 130, 180));
-        btnDetay.setForeground(Color.WHITE);
+        // Renklendirme (Opsiyonel)
+        btnIstatistik.setBackground(new Color(255, 69, 0)); // Turuncu
+        btnIstatistik.setForeground(Color.WHITE);
 
+        bottomPanel.add(btnIstatistik); // Panele ekle
+        bottomPanel.add(btnDegerlendir);
         bottomPanel.add(btnDetay);
-        bottomPanel.add(btnNotlandir);
         bottomPanel.add(btnCikis);
-
         add(bottomPanel, BorderLayout.SOUTH);
 
-        // --- 4. SAHTE VERİLER VE FİLTRE MANTIĞI ---
-        // Tüm verileri bir havuzda tutalım (Backend gelene kadar)
-        Object[][] tumVeriler = {
-                {"BAS001", "Veli Kaya", "Savunma Ltd.", "Sistem Mühendisi", "2026-06-15", "Beklemede"},
-                {"BAS002", "Ahmet Yılmaz", "Tekno A.Ş.", "Yazılım Stajyeri", "2026-07-01", "Beklemede"},
-                {"BAS003", "Ali Yılmaz", "Tekno A.Ş.", "Yazılım Stajyeri", "2026-07-01", "Onaylandı"},
-                {"BAS004", "Ayşe Demir", "Oyun Stüdyosu", "Game Dev", "2026-08-01", "Reddedildi"}
-        };
-
-        // İlk açılışta hepsini yükle
-        tabloyuDoldur(tumVeriler, "Hepsi");
-
-        // FİLTRE AKSİYONU (İşte çalışmayan kısım burasıydı)
+        // --- AKSİYONLAR ---
         cmbFiltre.addActionListener(e -> {
             String secilen = (String) cmbFiltre.getSelectedItem();
-            tabloyuDoldur(tumVeriler, secilen);
+            tabloyuDoldur(tumBasvurular, secilen);
         });
 
-        // --- DİĞER BUTON AKSİYONLARI ---
+        btnIstatistik.addActionListener(e -> {
+            new IstatistikEkrani().setVisible(true);
+        });
+
         btnCikis.addActionListener(e -> {
             this.dispose();
             new LoginEkrani().setVisible(true);
         });
 
-        btnNotlandir.addActionListener(e -> {
+        // Değerlendirme Ekranını Aç
+        btnDegerlendir.addActionListener(e -> {
             new DegerlendirmeEkrani(kullanici).setVisible(true);
         });
 
         btnDetay.addActionListener(e -> {
             int selectedRow = table.getSelectedRow();
             if (selectedRow != -1) {
+                String basvuruId = (String) tableModel.getValueAt(selectedRow, 0);
+                String ogrenci = (String) tableModel.getValueAt(selectedRow, 1);
                 String durum = (String) tableModel.getValueAt(selectedRow, 5);
+
                 if(durum.equals("Beklemede")) {
-                    String ogrenci = (String) tableModel.getValueAt(selectedRow, 1);
-                    int secim = JOptionPane.showConfirmDialog(this, ogrenci + " başvurusunu onaylıyor musun?", "Onay", JOptionPane.YES_NO_OPTION);
-                    if(secim == JOptionPane.YES_OPTION) tableModel.setValueAt("Onaylandı", selectedRow, 5);
-                    else tableModel.setValueAt("Reddedildi", selectedRow, 5);
+                    int secim = JOptionPane.showConfirmDialog(this,
+                            ogrenci + " başvurusunu onaylıyor musun?\n(Hayır dersen Reddedilir)",
+                            "Başvuru İşlemi", JOptionPane.YES_NO_CANCEL_OPTION);
+
+                    BasvuruDAO dao = new BasvuruDAO();
+                    if(secim == JOptionPane.YES_OPTION) {
+                        // Şirket Yetkilisi ataması için basit bir input box açıyoruz
+                        String yetkiliId = JOptionPane.showInputDialog(this, "Şirket Yetkili ID giriniz (Örn: YET001):", "YET001");
+                        if(yetkiliId != null && !yetkiliId.isEmpty()){
+                            // Stajı Başlat (Transaction)
+                            org.example.DataAccessLayer.StajDAO stajDao = new org.example.DataAccessLayer.StajDAO();
+                            if(stajDao.stajBaslat(basvuruId, yetkiliId)){
+                                JOptionPane.showMessageDialog(this, "Staj Başlatıldı!");
+                                refreshData();
+                            } else {
+                                JOptionPane.showMessageDialog(this, "Hata! Yetkili ID kontrol ediniz.");
+                            }
+                        }
+                    } else if (secim == JOptionPane.NO_OPTION) {
+                        if(dao.basvuruDurumGuncelle(basvuruId, "Reddedildi")) {
+                            JOptionPane.showMessageDialog(this, "Başvuru Reddedildi.");
+                            refreshData();
+                        }
+                    }
                 } else {
-                    JOptionPane.showMessageDialog(this, "Bu başvuru zaten sonuçlanmış.");
+                    JOptionPane.showMessageDialog(this, "Sadece 'Beklemede' olan başvurulara işlem yapabilirsiniz.");
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Lütfen tablodan bir satır seçiniz.");
+            }
+        });
+    }
+
+    // --- YARDIMCI METODLAR ---
+
+    // Filtreye göre tabloyu doldurur
+    private void tabloyuDoldur(List<Basvuru> veriListesi, String filtre) {
+        tableModel.setRowCount(0); // Tabloyu temizle
+
+        for (Basvuru b : veriListesi) {
+            if (filtre.equals("Hepsi") || b.getDurum().equalsIgnoreCase(filtre)) {
+                tableModel.addRow(new Object[]{
+                        b.getBasvuruId(),
+                        b.getOgrenciAdSoyad(),
+                        b.getSirketAd(),
+                        b.getPozisyon(),
+                        b.getBaslangicTarihi(),
+                        b.getDurum()
+                });
+            }
+        }
+    }
+
+    // İşlem yapıldıktan sonra verileri veritabanından tekrar çeker
+    // Verileri veritabanından tekrar çekip tabloyu yenileyen metod
+    private void refreshData() {
+        // 1. Veritabanından en güncel listeyi çek
+        BasvuruDAO dao = new BasvuruDAO();
+        tumBasvurular = dao.tumBasvurulariGetir();
+
+        // 2. Tabloyu temizle
+        tableModel.setRowCount(0);
+
+        // 3. Role göre tabloyu tekrar doldur
+        if (kullanici.getRol().equalsIgnoreCase("OGRENCI")) {
+            // -- ÖĞRENCİ İSE SADECE KENDİ KAYITLARI --
+            for (Basvuru b : tumBasvurular) {
+                if (b.getOgrenciAdSoyad().equalsIgnoreCase(kullanici.getAdSoyad())) {
+                    tableModel.addRow(new Object[]{
+                            b.getBasvuruId(),
+                            b.getSirketAd(),
+                            b.getPozisyon(),
+                            b.getBaslangicTarihi(),
+                            b.getDurum()
+                    });
+                }
+            }
+        } else {
+            // -- DANIŞMAN İSE HEPSİ (veya filtreye göre) --
+            // Varsayılan olarak "Hepsi" modunda yeniliyoruz
+            tabloyuDoldur(tumBasvurular, "Hepsi");
+        }
+    }
+
+    private void initSirketEkrani() {
+        // --- 1. ÜST PANEL ---
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        topPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        topPanel.add(new JLabel("Şirket Yetkili Paneli (" + kullanici.getAdSoyad() + ")"));
+        add(topPanel, BorderLayout.NORTH);
+
+        // --- 2. ORTA PANEL (Tablo) ---
+        String[] columnNames = {"ID", "Öğrenci", "Pozisyon", "Tarih", "Durum"};
+        tableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) { return false; }
+        };
+
+        // Verileri Çek (Sadece bu şirkete ait olanlar)
+        BasvuruDAO dao = new BasvuruDAO();
+        // Login olurken set ettiğimiz şirket ID'sini kullanıyoruz
+        List<Basvuru> sirketBasvurulari = dao.sirketBasvurulariniGetir(kullanici.getBagliSirketId());
+
+        for (Basvuru b : sirketBasvurulari) {
+            tableModel.addRow(new Object[]{
+                    b.getBasvuruId(), b.getOgrenciAdSoyad(), b.getPozisyon(), b.getBaslangicTarihi(), b.getDurum()
+            });
+        }
+
+        table = new JTable(tableModel);
+        table.setRowHeight(25);
+        add(new JScrollPane(table), BorderLayout.CENTER);
+
+        // --- 3. ALT PANEL ---
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton btnIslem = new JButton("Başvuruyu Değerlendir");
+        JButton btnCikis = new JButton("Çıkış Yap");
+        bottomPanel.add(btnIslem);
+        bottomPanel.add(btnCikis);
+        add(bottomPanel, BorderLayout.SOUTH);
+
+        // --- AKSİYONLAR ---
+        btnCikis.addActionListener(e -> { this.dispose(); new LoginEkrani().setVisible(true); });
+
+        btnIslem.addActionListener(e -> {
+            int selectedRow = table.getSelectedRow();
+            if (selectedRow != -1) {
+                String basvuruId = (String) tableModel.getValueAt(selectedRow, 0);
+                String durum = (String) tableModel.getValueAt(selectedRow, 4);
+
+                if (durum.equals("Beklemede")) {
+                    Object[] options = {"Kabul Et", "Reddet", "İptal"};
+                    int secim = JOptionPane.showOptionDialog(this, "Bu staj başvurusuna şirket olarak yanıtınız nedir?",
+                            "Şirket Onayı", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE,
+                            null, options, options[0]);
+
+                    if (secim == 0) { // Kabul Et
+                        // Durumu 'Şirket Onayladı' yapıyoruz (Danışman sonra 'Onaylandı' yapacak)
+                        if (dao.basvuruDurumGuncelle(basvuruId, "Şirket Onayladı")) {
+                            JOptionPane.showMessageDialog(this, "Başvuru kabul edildi. Danışman onayı bekleniyor.");
+                            // Tabloyu yenileme kodu eklenebilir
+                        }
+                    } else if (secim == 1) { // Reddet
+                        dao.basvuruDurumGuncelle(basvuruId, "Reddedildi");
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(this, "Bu başvuru zaten işlem görmüş.");
                 }
             } else {
                 JOptionPane.showMessageDialog(this, "Seçim yapınız.");
             }
         });
-    }
-
-    // Tabloyu filtreye göre dolduran yardımcı metod
-    private void tabloyuDoldur(Object[][] veriHavuzu, String filtre) {
-        tableModel.setRowCount(0); // Tabloyu temizle
-
-        for (Object[] satir : veriHavuzu) {
-            String durum = (String) satir[5]; // Durum sütunu
-
-            if (filtre.equals("Hepsi") || durum.equals(filtre)) {
-                tableModel.addRow(satir);
-            }
-        }
-    }
-
-    private void initSirketEkrani() {
-        // Şirket paneli sırası gelince burayı dolduracağız
-        JLabel label = new JLabel("Şirket Paneli - Yapım Aşamasında", SwingConstants.CENTER);
-        add(label, BorderLayout.CENTER);
     }
 }

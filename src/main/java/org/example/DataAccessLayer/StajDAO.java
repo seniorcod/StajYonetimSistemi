@@ -88,4 +88,23 @@ public class StajDAO {
             }
         }
     }
+    // Öğrencinin aktif stajının ID'sini getirir (Rapor yüklemek için lazım)
+    public String getAktifStajId(String ogrenciId) {
+        String sql = "SELECT stajid FROM public.staj WHERE ogrenciid = ? AND durum = 'Aktif'"; // veya 'Devam Ediyor'
+
+        try (Connection conn = DbHelper.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, ogrenciId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getString("stajid"); // Örn: STJ12345
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null; // Aktif stajı yoksa null döner
+    }
 }

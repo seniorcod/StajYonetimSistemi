@@ -1,13 +1,17 @@
 package org.example.Gui;
 
+import org.example.DataAccessLayer.DegerlendirmeDAO;
+import org.example.Model.DegerlendirilecekStaj;
 import org.example.Model.Kullanici;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
 
 public class DegerlendirmeEkrani extends JFrame {
 
     private final Kullanici kullanici;
+    private JComboBox<DegerlendirilecekStaj> cmbOgrenci; // Backend'den dolacak
 
     public DegerlendirmeEkrani(Kullanici kullanici) {
         this.kullanici = kullanici;
@@ -28,16 +32,15 @@ public class DegerlendirmeEkrani extends JFrame {
         JPanel formPanel = new JPanel(new GridLayout(4, 1, 10, 10));
         formPanel.setBorder(BorderFactory.createEmptyBorder(10, 30, 10, 30));
 
-        // 1. Öğrenci Seçimi (Şimdilik manuel, backend gelince tablodan seçileni alacağız)
-        formPanel.add(new JLabel("Değerlendirilecek Öğrenci (Staj ID):"));
-        JTextField txtOgrenci = new JTextField("STJ001 - Ali Yılmaz"); // Örnek
-        txtOgrenci.setEditable(false); // Danışman bunu değiştiremesin
-        formPanel.add(txtOgrenci);
+        // 1. Öğrenci Seçimi
+        formPanel.add(new JLabel("Değerlendirilecek Öğrenci Seçiniz:"));
+        cmbOgrenci = new JComboBox<>();
+        stajlariYukle(); // Metodu aşağıda çağırıyoruz
+        formPanel.add(cmbOgrenci);
 
         // 2. Puan Girişi
         formPanel.add(new JLabel("Puan (0-100 Arası):"));
-        JSpinner spinnerPuan = new JSpinner(new SpinnerNumberModel(50, 0, 100, 1));
-        // (Varsayılan 50, Min 0, Max 100, Artış 1)
+        JSpinner spinnerPuan = new JSpinner(new SpinnerNumberModel(80, 0, 100, 1));
         formPanel.add(spinnerPuan);
 
         // 3. Yorum Alanı
@@ -64,9 +67,6 @@ public class DegerlendirmeEkrani extends JFrame {
         JButton btnKaydet = new JButton("Notu Kaydet");
         JButton btnIptal = new JButton("İptal");
 
-        // btnKaydet.setBackground(new Color(70, 130, 180)); // Mavi buton
-        // btnKaydet.setForeground(Color.WHITE);
-
         bottomPanel.add(btnKaydet);
         bottomPanel.add(btnIptal);
 
@@ -76,6 +76,13 @@ public class DegerlendirmeEkrani extends JFrame {
         btnIptal.addActionListener(e -> this.dispose());
 
         btnKaydet.addActionListener(e -> {
+            DegerlendirilecekStaj secilen = (DegerlendirilecekStaj) cmbOgrenci.getSelectedItem();
+
+            if (secilen == null || secilen.getStajId().equals("0")) {
+                JOptionPane.showMessageDialog(this, "Lütfen listeden geçerli bir öğrenci seçiniz.");
+                return;
+            }
+
             int puan = (int) spinnerPuan.getValue();
             String yorum = txtYorum.getText();
 
@@ -84,14 +91,33 @@ public class DegerlendirmeEkrani extends JFrame {
                 return;
             }
 
-            JOptionPane.showMessageDialog(this,
-                    "Değerlendirme Kaydedildi!\n" +
-                            "Puan: " + puan + "\n" +
-                            "Yorum: " + yorum + "\n\n" +
-                            "(Veritabanı bağlantısı bekleniyor...)",
-                    "Başarılı", JOptionPane.INFORMATION_MESSAGE);
+            // Backend'e Gönder
+            DegerlendirmeDAO dao = new DegerlendirmeDAO();
+            boolean sonuc = dao.degerlendirmeEkle(secilen.getStajId(), kullanici.getId(), puan, yorum);
 
-            this.dispose();
+            if (sonuc) {
+                JOptionPane.showMessageDialog(this,
+                        "Değerlendirme Başarıyla Kaydedildi!\nÖğrenci: " + secilen,
+                        "Başarılı", JOptionPane.INFORMATION_MESSAGE);
+                this.dispose();
+            } else {
+                JOptionPane.showMessageDialog(this, "Kaydedilirken hata oluştu!", "Hata", JOptionPane.ERROR_MESSAGE);
+            }
         });
+    }
+
+    // Veritabanındaki Danışmana ait stajları yükle
+    private void stajlariYukle() {
+        DegerlendirmeDAO dao = new DegerlendirmeDAO();
+        List<DegerlendirilecekStaj> stajlar = dao.getDanismanStajlari(kullanici.getId());
+
+        for (DegerlendirilecekStaj s : stajlar) {
+            cmbOgrenci.addItem(s);
+        }
+
+        if (stajlar.isEmpty()) {
+            cmbOgrenci.addItem(new DegerlendirilecekStaj("0", "Değerlendirilecek Staj Yok", "-"));
+            cmbOgrenci.setEnabled(false);
+        }
     }
 }
