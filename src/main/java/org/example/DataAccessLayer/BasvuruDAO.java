@@ -43,4 +43,25 @@ public class BasvuruDAO {
         }
         return liste;
     }
+    // Başvuru Durumunu Güncelle (Onay/Red İçin)
+    public boolean basvuruDurumGuncelle(String basvuruId, String yeniDurum) {
+        // SQL: Belirtilen ID'ye sahip başvurunun durumunu değiştir
+        String sql = "UPDATE public.basvuru SET durum = ? WHERE basvuruid = ?";
+
+        try (Connection conn = DbHelper.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, yeniDurum); // Örn: "Onaylandı"
+            ps.setString(2, basvuruId); // Örn: "BAS002"
+
+            int etkilenenSatir = ps.executeUpdate();
+
+            // Eğer 1 satır güncellendiyse işlem başarılıdır
+            return etkilenenSatir > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }
