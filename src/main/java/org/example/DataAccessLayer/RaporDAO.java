@@ -56,4 +56,21 @@ public class RaporDAO {
             return false;
         }
     }
+    // Danışman raporu onaylar veya reddeder
+    public boolean raporDurumGuncelle(String raporId, String yeniDurum) {
+        String sql = "UPDATE public.raporlar SET onaydurumu = ? WHERE raporid = ?";
+
+        try (Connection conn = DbHelper.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, yeniDurum); // Örn: "Onaylandı" veya "Düzeltme İstendi"
+            ps.setString(2, raporId);
+
+            return ps.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

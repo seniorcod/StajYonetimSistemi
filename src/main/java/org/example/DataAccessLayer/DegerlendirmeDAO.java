@@ -39,29 +39,66 @@ public class DegerlendirmeDAO {
         return liste;
     }
 
-    // Notu Veritabanına Kaydet
+    // Notu Kaydet ve Stajı "Tamamlandı" Yap
+    // Notu Kaydet ve Stajı "Tamamlandı" Yap
     public boolean degerlendirmeEkle(String stajId, String danismanId, int puan, String yorum) {
-        String sql = "INSERT INTO public.degerlendirmeler (degerlendirmeid, stajid, danismanid, puan, yorum, tarih) " +
-                "VALUES (?, ?, ?, ?, ?, ?)";
+        Connection conn = null;
+        try {
+            conn = DbHelper.getConnection();
+            conn.setAutoCommit(false); // Transaction Başlat
 
+            // 1. Notu Ekle
+            String sqlNot = "INSERT INTO public.degerlendirmeler (degerlendirmeid, stajid, danismanid, puan, yorum, tarih) " +
+                    "VALUES (?, ?, ?, ?, ?, ?)";
+            PreparedStatement psNot = conn.prepareStatement(sqlNot);
+
+            // ... (Parametre set etme kısımları aynı) ...
+            psNot.setString(1, "DEG" + (int)(Math.random() * 10000));
+            psNot.setString(2, stajId);
+            psNot.setString(3, danismanId);
+            psNot.setBigDecimal(4, new java.math.BigDecimal(puan));
+            psNot.setString(5, yorum);
+            psNot.setDate(6, new java.sql.Date(System.currentTimeMillis()));
+            psNot.executeUpdate();
+
+            // 2. Staj Durumunu 'Tamamlandı' Yap
+            String sqlStaj = "UPDATE public.staj SET durum = 'Tamamlandı' WHERE stajid = ?";
+            PreparedStatement psStaj = conn.prepareStatement(sqlStaj);
+            psStaj.setString(1, stajId);
+            psStaj.executeUpdate();
+
+            // 3. Başvuru Durumunu da 'Tamamlandı' Yap (LİSTEDEN GİTMESİ İÇİN BU ŞART)
+            String sqlBasvuru = "UPDATE public.basvuru SET durum = 'Tamamlandı' WHERE basvuruid = (SELECT basvuruid FROM public.staj WHERE stajid = ?)";
+            PreparedStatement psBasvuru = conn.prepareStatement(sqlBasvuru);
+            psBasvuru.setString(1, stajId);
+            psBasvuru.executeUpdate();
+
+            conn.commit(); // Hepsini onayla
+            return true;
+
+        } catch (SQLException e) {
+            try { if (conn != null) conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+            e.printStackTrace();
+            return false;
+        } finally {
+            try { if (conn != null) conn.close(); } catch (SQLException e) { e.printStackTrace(); }
+        }
+    }
+    // Staj ID'sine göre not ve yorumu getirir
+    public String[] getDegerlendirmeSonucu(String stajId) {
+        String sql = "SELECT puan, yorum FROM public.degerlendirmeler WHERE stajid = ?";
         try (Connection conn = DbHelper.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            // Rastgele ID (DEG + Sayı)
-            String yeniId = "DEG" + (int)(Math.random() * 10000);
-
-            ps.setString(1, yeniId);
-            ps.setString(2, stajId);
-            ps.setString(3, danismanId);
-            ps.setBigDecimal(4, new java.math.BigDecimal(puan)); // Numeric alan
-            ps.setString(5, yorum);
-            ps.setDate(6, new java.sql.Date(System.currentTimeMillis())); // Bugün
-
-            return ps.executeUpdate() > 0;
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
+            ps.setString(1, stajId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return new String[]{
+                        String.valueOf(rs.getInt("puan")),
+                        rs.getString("yorum")
+                };
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return null;
     }
 }

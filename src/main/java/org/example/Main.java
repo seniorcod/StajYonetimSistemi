@@ -1,27 +1,35 @@
 package org.example;
 
 import com.formdev.flatlaf.FlatLightLaf;
-import org.example.DataAccessLayer.AuthDAO;
-import org.example.Model.Kullanici;
+import org.example.DataAccessLayer.StajDAO;
 
 public class Main {
     public static void main(String[] args) {
-        FlatLightLaf.setup(); // Tema
+        // Tema kurulumu (Hata vermemesi için try-catch içinde)
+        try {
+            FlatLightLaf.setup();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
-        AuthDAO auth = new AuthDAO();
+        StajDAO stajDAO = new StajDAO();
 
-        // Veritabanındaki gerçek veri: Ali Yılmaz
-        System.out.println("Giriş deneniyor...");
+        System.out.println("--- STAJ BAŞLATMA TESTİ ---");
 
-        // Şifre olarak SQL'de belirlediğimiz varsayılan '12345'i kullanıyoruz
-        Kullanici girisYapan = auth.girisYap("ali.yilmaz@ogr.edu.tr", "12345");
+        // SENARYO:
+        // Danışman (DAN001), BAS002 nolu başvuruyu onaylıyor.
 
-        if (girisYapan != null) {
-            System.out.println("✅ GİRİŞ BAŞARILI!");
-            System.out.println("Hoşgeldin: " + girisYapan.getAdSoyad()); // Çıktı: Ali Yılmaz
-            System.out.println("Rolü: " + girisYapan.getRol());           // Çıktı: OGRENCI
+        String basvuruId = "BAS002";
+        String yetkiliId = "YET002";
+        String danismanId = "DAN001"; // <-- YENİ EKLENEN (Murat Şahin)
+
+        // ARTIK 3 PARAMETRE GÖNDERİYORUZ:
+        boolean sonuc = stajDAO.stajBaslat(basvuruId, yetkiliId, danismanId);
+
+        if (sonuc) {
+            System.out.println("🎉 Tebrikler! Veli Kaya'nın stajı resmen başladı.");
         } else {
-            System.out.println("❌ GİRİŞ BAŞARISIZ! Şifre sütunlarını eklediğinden emin misin?");
+            System.out.println("❌ İşlem başarısız oldu (Belki zaten stajdadır veya ID yanlıştır).");
         }
     }
 }

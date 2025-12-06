@@ -7,11 +7,15 @@ import java.awt.*;
 public class IstatistikEkrani extends JFrame {
 
     public IstatistikEkrani() {
-        setTitle("Sistem İstatistikleri ve Özet Rapor");
-        setSize(500, 400);
+        setTitle("Sistem İstatistikleri");
+        setSize(600, 250); // Pencereyi küçülttük çünkü alt yazı kalktı
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
-        setLayout(new GridLayout(2, 1)); // Üstte sayılar, altta grafiksel bilgi
+
+        // Arka plan
+        JPanel mainPanel = new JPanel(new BorderLayout(20, 20));
+        mainPanel.setBackground(new Color(245, 247, 250));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         // Verileri Çek
         IstatistikDAO dao = new IstatistikDAO();
@@ -20,49 +24,44 @@ public class IstatistikEkrani extends JFrame {
         int aktifStaj = dao.getAktifStajSayisi();
         String populerSirket = dao.getEnPopulerSirket();
 
-        // --- ÜST KISIM: KARTLAR ---
-        JPanel cardsPanel = new JPanel(new GridLayout(2, 2, 10, 10));
-        cardsPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        cardsPanel.setBackground(new Color(240, 248, 255)); // Açık mavi
+        // --- KARTLAR (Sadece burası kaldı) ---
+        JPanel cardsPanel = new JPanel(new GridLayout(1, 4, 15, 0));
+        cardsPanel.setBackground(new Color(245, 247, 250));
 
-        cardsPanel.add(createCard("Toplam Başvuru", String.valueOf(toplamBasvuru), new Color(100, 149, 237)));
-        cardsPanel.add(createCard("Onaylanan / Biten", String.valueOf(onayliStaj), new Color(60, 179, 113)));
-        cardsPanel.add(createCard("Şu An Stajda", String.valueOf(aktifStaj), new Color(255, 165, 0)));
-        cardsPanel.add(createCard("Popüler Şirket", populerSirket, new Color(147, 112, 219)));
+        cardsPanel.add(createCard("Toplam", String.valueOf(toplamBasvuru), new Color(100, 149, 237)));
+        cardsPanel.add(createCard("Tamamlanan", String.valueOf(onayliStaj), new Color(60, 179, 113)));
+        cardsPanel.add(createCard("Aktif Staj", String.valueOf(aktifStaj), new Color(255, 165, 0)));
+        cardsPanel.add(createCard("Popüler", populerSirket, new Color(147, 112, 219)));
 
-        add(cardsPanel);
+        mainPanel.add(cardsPanel, BorderLayout.CENTER);
 
-        // --- ALT KISIM: BİLGİLENDİRME ---
-        JPanel infoPanel = new JPanel(new BorderLayout());
-        infoPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        // Altına küçük bir bilgi notu (Zorunlu değil ama şık durur)
+        JLabel lblFooter = new JLabel("Veriler anlık olarak sistemden çekilmektedir.", SwingConstants.CENTER);
+        lblFooter.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        lblFooter.setForeground(Color.GRAY);
+        mainPanel.add(lblFooter, BorderLayout.SOUTH);
 
-        JTextArea txtInfo = new JTextArea();
-        txtInfo.setText("SİSTEM ÖZETİ:\n\n" +
-                "- Sistemde toplam " + toplamBasvuru + " adet başvuru kaydı bulunmaktadır.\n" +
-                "- Bunlardan " + aktifStaj + " tanesi şu anda aktif olarak staj yapmaktadır.\n" +
-                "- Öğrencilerin en çok tercih ettiği şirket: " + populerSirket + "\n\n" +
-                "Not: Raporlar bölümünden detaylı çıktılar alınabilir.");
-        txtInfo.setEditable(false);
-        txtInfo.setFont(new Font("Monospaced", Font.PLAIN, 14));
-
-        infoPanel.add(new JScrollPane(txtInfo), BorderLayout.CENTER);
-        add(infoPanel);
+        add(mainPanel);
     }
 
-    // Şık kutucuklar oluşturmak için yardımcı metod
+    // Kart Oluşturucu Metod
     private JPanel createCard(String baslik, String deger, Color renk) {
         JPanel card = new JPanel(new BorderLayout());
-        card.setBackground(renk);
-        card.setBorder(BorderFactory.createLineBorder(Color.WHITE, 2));
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(4, 0, 0, 0, renk), // Üstte renkli çizgi
+                BorderFactory.createLineBorder(new Color(230, 230, 230), 1)
+        ));
 
         JLabel lblDeger = new JLabel(deger, SwingConstants.CENTER);
-        lblDeger.setFont(new Font("Arial", Font.BOLD, 24));
-        lblDeger.setForeground(Color.WHITE);
+        lblDeger.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblDeger.setForeground(new Color(50, 50, 50));
+        lblDeger.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
 
         JLabel lblBaslik = new JLabel(baslik, SwingConstants.CENTER);
-        lblBaslik.setFont(new Font("Arial", Font.PLAIN, 14));
-        lblBaslik.setForeground(Color.WHITE);
-        lblBaslik.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+        lblBaslik.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblBaslik.setForeground(Color.GRAY);
+        lblBaslik.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
 
         card.add(lblDeger, BorderLayout.CENTER);
         card.add(lblBaslik, BorderLayout.SOUTH);

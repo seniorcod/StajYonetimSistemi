@@ -43,17 +43,56 @@ public class AnaEkran extends JFrame {
         }
     }
 
-     private void initOgrenciEkrani() {
-        // --- 1. ÜST PANEL ---
-        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        topPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+    private void initOgrenciEkrani() {
+        // Ana Panel (Tüm ekranı kaplayacak)
+        JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        mainPanel.setBackground(new Color(245, 247, 250)); // Kurumsal Gri Arkaplan
 
-        JLabel welcomeLabel = new JLabel("Merhaba, " + kullanici.getAdSoyad() + " (Öğrenci Paneli)");
-        welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        topPanel.add(welcomeLabel);
-        add(topPanel, BorderLayout.NORTH);
+        // --- 1. ÜST KISIM (BAŞLIK + KARTLAR) ---
+        JPanel topContainer = new JPanel();
+        topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
+        topContainer.setBackground(new Color(245, 247, 250));
 
-        // --- 2. ORTA PANEL (Tablo) ---
+        // Hoşgeldin Başlığı
+        JLabel welcomeLabel = new JLabel("👋 Merhaba, " + kullanici.getAdSoyad());
+        welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        welcomeLabel.setForeground(new Color(44, 62, 80));
+        welcomeLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        topContainer.add(welcomeLabel);
+        topContainer.add(Box.createVerticalStrut(15)); // Boşluk
+
+        // İstatistikleri Hesapla
+        int toplam = 0, bekleyen = 0, onayli = 0;
+        if (tumBasvurular != null) {
+            for (Basvuru b : tumBasvurular) {
+                if (b.getOgrenciAdSoyad().equalsIgnoreCase(kullanici.getAdSoyad())) {
+                    toplam++;
+                    // Bekleyen veya Şirket Onaylamışsa -> İşlem Bekliyor sayılır
+                    if (b.getDurum().equals("Beklemede") || b.getDurum().equals("Şirket Onayladı")) bekleyen++;
+                    // Danışman onaylamışsa veya staj başlamışsa -> Onaylı sayılır
+                    if (b.getDurum().equals("Onaylandı") || b.getDurum().equals("Stajda") || b.getDurum().equals("Tamamlandı")) onayli++;
+                }
+            }
+        }
+
+        // İstatistik Kartları Paneli
+        JPanel cardsPanel = new JPanel(new GridLayout(1, 3, 20, 0));
+        cardsPanel.setBackground(new Color(245, 247, 250));
+        cardsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        cardsPanel.add(createStatCard("Toplam Başvuru", String.valueOf(toplam), new Color(100, 149, 237), "📂"));
+        cardsPanel.add(createStatCard("Onaylanan / Stajda", String.valueOf(onayli), new Color(46, 204, 113), "✅"));
+        cardsPanel.add(createStatCard("İşlem Bekleyen", String.valueOf(bekleyen), new Color(243, 156, 18), "⏳"));
+
+        // Kart boyutunu sınırla
+        cardsPanel.setPreferredSize(new Dimension(800, 100));
+        cardsPanel.setMaximumSize(new Dimension(2000, 100));
+
+        topContainer.add(cardsPanel);
+        mainPanel.add(topContainer, BorderLayout.NORTH);
+
+        // --- 2. ORTA KISIM (BAŞVURU LİSTESİ TABLOSU) ---
         String[] columnNames = {"Başvuru ID", "Şirket", "Pozisyon", "Başlangıç", "Durum"};
 
         tableModel = new DefaultTableModel(columnNames, 0) {
@@ -61,183 +100,260 @@ public class AnaEkran extends JFrame {
             public boolean isCellEditable(int row, int column) { return false; }
         };
 
-        // --- VERİTABANI VERİLERİNİ YÜKLEME ---
-        // Sadece giriş yapan öğrencinin kendi başvurularını listeliyoruz
+        // Verileri Yükle (Sadece bu öğrencinin başvuruları)
         if (tumBasvurular != null) {
             for (Basvuru b : tumBasvurular) {
-                // İsim eşleşmesiyle filtreliyoruz
                 if (b.getOgrenciAdSoyad().equalsIgnoreCase(kullanici.getAdSoyad())) {
                     tableModel.addRow(new Object[]{
-                            b.getBasvuruId(),
-                            b.getSirketAd(),
-                            b.getPozisyon(),
-                            b.getBaslangicTarihi(),
-                            b.getDurum()
+                            b.getBasvuruId(), b.getSirketAd(), b.getPozisyon(), b.getBaslangicTarihi(), b.getDurum()
                     });
                 }
             }
         }
 
         table = new JTable(tableModel);
-        table.setRowHeight(25);
+        table.setRowHeight(35);
+        table.setShowVerticalLines(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
+        table.getTableHeader().setBackground(Color.WHITE);
+        table.getTableHeader().setPreferredSize(new Dimension(0, 40));
+
+        // Renklendiriciyi Bağla (Tablodaki yazıları boyar)
+        try {
+            table.getColumnModel().getColumn(4).setCellRenderer(new StatusRenderer());
+        } catch (Exception e) { e.printStackTrace(); }
+
         JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Başvurularım"));
+        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(230, 230, 230), 1));
+        scrollPane.getViewport().setBackground(Color.WHITE);
 
-        JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-        centerPanel.add(scrollPane, BorderLayout.CENTER);
-        add(centerPanel, BorderLayout.CENTER);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
 
-        // --- 3. ALT PANEL (GÜNCELLENMİŞ BUTONLAR) ---
-        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        // --- 3. ALT KISIM (GÜNCELLENMİŞ BUTONLAR) ---
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 10));
+        bottomPanel.setBackground(new Color(245, 247, 250));
 
-        JButton btnRaporlar = new JButton("Rapor İşlemleri"); // Yeni Buton
-        JButton btnYeniBasvuru = new JButton("Yeni Başvuru Yap");
-        JButton btnCikis = new JButton("Çıkış Yap");
+        // Yeni Kurguya Uygun Butonlar
+        JButton btnStajlarim = new JButton("🎓 Stajlarım (Bitir/Görüntüle)");
+        JButton btnYeniBasvuru = new JButton("➕ Yeni Başvuru");
+        JButton btnCikis = new JButton("🚪 Çıkış");
 
-        bottomPanel.add(btnRaporlar);
+        styleButton(btnStajlarim, new Color(155, 89, 182)); // Mor
+        styleButton(btnYeniBasvuru, new Color(52, 152, 219)); // Mavi
+        styleButton(btnCikis, new Color(231, 76, 60)); // Kırmızı
+
+        bottomPanel.add(btnStajlarim);
         bottomPanel.add(btnYeniBasvuru);
         bottomPanel.add(btnCikis);
 
-        add(bottomPanel, BorderLayout.SOUTH);
+        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
+
+        // --- EKRANI GÜNCELLE ---
+        this.setContentPane(mainPanel);
+        this.revalidate();
+        this.repaint();
 
         // --- AKSİYONLAR ---
-        btnCikis.addActionListener(e -> {
-            this.dispose();
-            new LoginEkrani().setVisible(true);
+
+        // Çıkış
+        btnCikis.addActionListener(e -> { dispose(); new LoginEkrani().setVisible(true); });
+
+        // Yeni Başvuru (Kapanınca tabloyu yeniler)
+        btnYeniBasvuru.addActionListener(e -> {
+            YeniBasvuruEkrani ekran = new YeniBasvuruEkrani(kullanici);
+            ekran.addWindowListener(new java.awt.event.WindowAdapter() {
+                public void windowClosed(java.awt.event.WindowEvent e) { refreshData(); }
+            });
+            ekran.setVisible(true);
         });
 
-         btnYeniBasvuru.addActionListener(e -> {
-             YeniBasvuruEkrani ekran = new YeniBasvuruEkrani(kullanici);
+        // Stajlarım Ekranını Aç (Yeni Ekran)
+        btnStajlarim.addActionListener(e -> new StajlarimEkrani(kullanici).setVisible(true));
+    }
 
-             // Pencere kapandığını dinleyen "Dinleyici" (Listener) ekliyoruz
-             ekran.addWindowListener(new java.awt.event.WindowAdapter() {
-                 @Override
-                 public void windowClosed(java.awt.event.WindowEvent windowEvent) {
-                     refreshData(); // Pencere kapanınca tabloyu güncelle!
-                 }
-             });
+    // --- YARDIMCI METOD: KART OLUŞTURMA ---
+    private JPanel createStatCard(String title, String count, Color color, String icon) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 4, 0, 0, color), // Sol tarafa renkli çizgi
+                BorderFactory.createEmptyBorder(15, 20, 15, 20)
+        ));
 
-             ekran.setVisible(true);
-         });
+        JLabel lblTitle = new JLabel(title);
+        lblTitle.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        lblTitle.setForeground(Color.GRAY);
 
-        // Rapor Ekranını Aç
-        btnRaporlar.addActionListener(e -> new RaporEkrani(kullanici).setVisible(true));
+        JLabel lblCount = new JLabel(count);
+        lblCount.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        lblCount.setForeground(new Color(50, 50, 50));
+
+        JLabel lblIcon = new JLabel(icon);
+        lblIcon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 30));
+
+        JPanel textPanel = new JPanel(new GridLayout(2, 1));
+        textPanel.setBackground(Color.WHITE);
+        textPanel.add(lblTitle);
+        textPanel.add(lblCount);
+
+        card.add(textPanel, BorderLayout.CENTER);
+        card.add(lblIcon, BorderLayout.EAST);
+
+        return card;
+    }
+
+    // --- YARDIMCI METOD: BUTON STİLİ ---
+    private void styleButton(JButton btn, Color bgColor) {
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btn.setBackground(bgColor);
+        btn.setForeground(Color.WHITE);
+        btn.setFocusPainted(false);
+        btn.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
 
     private void initDanismanEkrani() {
-        // --- 1. ÜST PANEL ---
-        JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        // Ana Panel
+        JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        mainPanel.setBackground(new Color(245, 247, 250));
 
-        JLabel welcomeLabel = new JLabel("Sayın Danışman: " + kullanici.getAdSoyad());
-        welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        topPanel.add(welcomeLabel, BorderLayout.WEST);
+        // --- 1. ÜST KISIM ---
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(new Color(245, 247, 250));
+        headerPanel.add(new JLabel("👨‍🏫 Danışman Paneli: " + kullanici.getAdSoyad()), BorderLayout.NORTH);
+        mainPanel.add(headerPanel, BorderLayout.NORTH);
 
-        // Filtreleme
-        String[] filtreler = {"Hepsi", "Beklemede", "Onaylandı", "Reddedildi", "Stajda"};
-        JComboBox<String> cmbFiltre = new JComboBox<>(filtreler);
-        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        filterPanel.add(new JLabel("Durum Filtresi:"));
-        filterPanel.add(cmbFiltre);
-        topPanel.add(filterPanel, BorderLayout.EAST);
-        add(topPanel, BorderLayout.NORTH);
-
-        // --- 2. ORTA PANEL ---
+        // --- 2. ORTA KISIM (TABLO) ---
         String[] columnNames = {"ID", "Öğrenci", "Şirket", "Pozisyon", "Tarih", "Durum"};
-
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
         };
 
-        // Verileri doldur
-        tabloyuDoldur(tumBasvurular, "Hepsi");
+        // Filtre: Sadece işi olanları göster
+        // --- GÜNCELLENEN KISIM: SADECE BU DANIŞMANA AİT OLANLARI GETİR ---
+        BasvuruDAO dao = new BasvuruDAO();
+        // Giriş yapan kullanıcının ID'sini (örn: DAN001) gönderiyoruz
+        java.util.List<Basvuru> benimBasvurularim = dao.getBasvurularByDanisman(kullanici.getId());
+
+        if (benimBasvurularim != null) {
+            for (Basvuru b : benimBasvurularim) {
+                // Burada da yine Şirket Onayı veya Danışman Gönderildi filtresini koruyoruz
+                if (b.getDurum().equals("Şirket Onayladı") || b.getDurum().equals("Danışmana Gönderildi") || b.getDurum().equals("Tamamlandı")) {
+                    tableModel.addRow(new Object[]{
+                            b.getBasvuruId(), b.getOgrenciAdSoyad(), b.getSirketAd(), b.getPozisyon(), b.getBaslangicTarihi(), b.getDurum()
+                    });
+                }
+            }
+        }
 
         table = new JTable(tableModel);
-        table.setRowHeight(25);
-        JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Öğrenci Başvuru Listesi (Canlı Veri)"));
+        table.setRowHeight(35);
+        try { table.getColumnModel().getColumn(5).setCellRenderer(new StatusRenderer()); } catch (Exception e) {}
 
-        JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-        centerPanel.add(scrollPane, BorderLayout.CENTER);
-        add(centerPanel, BorderLayout.CENTER);
+        mainPanel.add(new JScrollPane(table), BorderLayout.CENTER);
 
-        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        // --- 3. ALT KISIM (YENİ BUTONLAR) ---
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 10));
+        bottomPanel.setBackground(new Color(245, 247, 250));
 
-        JButton btnIstatistik = new JButton("📊 İstatistikler"); // <--- YENİ EKLENEN
-        JButton btnDegerlendir = new JButton("Staj Değerlendir");
-        JButton btnDetay = new JButton("İşlem Yap (Onay/Red)");
-        JButton btnCikis = new JButton("Çıkış Yap");
+        // İSTEDİĞİN 2 ÖZEL BUTON:
+        JButton btnBasvuruIslem = new JButton("✅ Başvuruyu Onayla/Reddet");
+        JButton btnStajDegerlendir = new JButton("⚖️ Stajı Değerlendir (Rapor)");
+        JButton btnIstatistik = new JButton("📊");
+        JButton btnCikis = new JButton("Çıkış");
 
-        // Renklendirme (Opsiyonel)
-        btnIstatistik.setBackground(new Color(255, 69, 0)); // Turuncu
-        btnIstatistik.setForeground(Color.WHITE);
+        styleButton(btnBasvuruIslem, new Color(52, 152, 219)); // Mavi
+        styleButton(btnStajDegerlendir, new Color(155, 89, 182)); // Mor
+        styleButton(btnIstatistik, new Color(243, 156, 18)); // Turuncu
+        styleButton(btnCikis, new Color(231, 76, 60));
 
-        bottomPanel.add(btnIstatistik); // Panele ekle
-        bottomPanel.add(btnDegerlendir);
-        bottomPanel.add(btnDetay);
+        bottomPanel.add(btnIstatistik);
+        bottomPanel.add(btnBasvuruIslem);
+        bottomPanel.add(btnStajDegerlendir);
         bottomPanel.add(btnCikis);
-        add(bottomPanel, BorderLayout.SOUTH);
+
+        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
+
+        this.setContentPane(mainPanel);
+        this.revalidate();
+        this.repaint();
 
         // --- AKSİYONLAR ---
-        cmbFiltre.addActionListener(e -> {
-            String secilen = (String) cmbFiltre.getSelectedItem();
-            tabloyuDoldur(tumBasvurular, secilen);
-        });
+        btnCikis.addActionListener(e -> { dispose(); new LoginEkrani().setVisible(true); });
+        btnIstatistik.addActionListener(e -> new IstatistikEkrani().setVisible(true));
 
-        btnIstatistik.addActionListener(e -> {
-            new IstatistikEkrani().setVisible(true);
-        });
+        // 1. BAŞVURU ONAYLA/REDDET (Sadece 'Şirket Onayladı' ise çalışır)
+        btnBasvuruIslem.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row == -1) { JOptionPane.showMessageDialog(this, "Seçim yapınız."); return; }
 
-        btnCikis.addActionListener(e -> {
-            this.dispose();
-            new LoginEkrani().setVisible(true);
-        });
+            String durum = (String) tableModel.getValueAt(row, 5);
+            String basvuruId = (String) tableModel.getValueAt(row, 0);
 
-        // Değerlendirme Ekranını Aç
-        btnDegerlendir.addActionListener(e -> {
-            new DegerlendirmeEkrani(kullanici).setVisible(true);
-        });
+            if (durum.equals("Şirket Onayladı")) {
+                int secim = JOptionPane.showConfirmDialog(this, "Bu başvuruyu onaylayıp stajı başlatıyor musunuz?", "Onay", JOptionPane.YES_NO_OPTION);
+                if (secim == JOptionPane.YES_OPTION) {
+                    org.example.DataAccessLayer.StajDAO stajDao = new org.example.DataAccessLayer.StajDAO();
+                    String yetkiliId = stajDao.otomatikYetkiliBul(basvuruId);
+                    if (yetkiliId == null) yetkiliId = JOptionPane.showInputDialog("Yetkili ID:");
 
-        btnDetay.addActionListener(e -> {
-            int selectedRow = table.getSelectedRow();
-            if (selectedRow != -1) {
-                String basvuruId = (String) tableModel.getValueAt(selectedRow, 0);
-                String ogrenci = (String) tableModel.getValueAt(selectedRow, 1);
-                String durum = (String) tableModel.getValueAt(selectedRow, 5);
-
-                if(durum.equals("Beklemede")) {
-                    int secim = JOptionPane.showConfirmDialog(this,
-                            ogrenci + " başvurusunu onaylıyor musun?\n(Hayır dersen Reddedilir)",
-                            "Başvuru İşlemi", JOptionPane.YES_NO_CANCEL_OPTION);
-
-                    BasvuruDAO dao = new BasvuruDAO();
-                    if(secim == JOptionPane.YES_OPTION) {
-                        // Şirket Yetkilisi ataması için basit bir input box açıyoruz
-                        String yetkiliId = JOptionPane.showInputDialog(this, "Şirket Yetkili ID giriniz (Örn: YET001):", "YET001");
-                        if(yetkiliId != null && !yetkiliId.isEmpty()){
-                            // Stajı Başlat (Transaction)
-                            org.example.DataAccessLayer.StajDAO stajDao = new org.example.DataAccessLayer.StajDAO();
-                            if(stajDao.stajBaslat(basvuruId, yetkiliId)){
-                                JOptionPane.showMessageDialog(this, "Staj Başlatıldı!");
-                                refreshData();
-                            } else {
-                                JOptionPane.showMessageDialog(this, "Hata! Yetkili ID kontrol ediniz.");
-                            }
-                        }
-                    } else if (secim == JOptionPane.NO_OPTION) {
-                        if(dao.basvuruDurumGuncelle(basvuruId, "Reddedildi")) {
-                            JOptionPane.showMessageDialog(this, "Başvuru Reddedildi.");
-                            refreshData();
-                        }
+                    if (stajDao.stajBaslat(basvuruId, yetkiliId, kullanici.getId())) {
+                        JOptionPane.showMessageDialog(this, "Staj Başlatıldı!");
+                        new AnaEkran(kullanici).setVisible(true); dispose();
                     }
-                } else {
-                    JOptionPane.showMessageDialog(this, "Sadece 'Beklemede' olan başvurulara işlem yapabilirsiniz.");
                 }
             } else {
-                JOptionPane.showMessageDialog(this, "Lütfen tablodan bir satır seçiniz.");
+                JOptionPane.showMessageDialog(this, "Bu buton sadece 'Şirket Onayladı' durumundakiler içindir.");
+            }
+        });
+
+        // 2. STAJI DEĞERLENDİR (DÜZELTİLMİŞ & YENİLEME ÖZELLİKLİ)
+        btnStajDegerlendir.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row == -1) {
+                JOptionPane.showMessageDialog(this, "Seçim yapınız.");
+                return;
+            }
+
+            String durum = (String) tableModel.getValueAt(row, 5);
+            String basvuruId = (String) tableModel.getValueAt(row, 0);
+            String ogrenci = (String) tableModel.getValueAt(row, 1);
+
+            if (durum.equals("Danışmana Gönderildi")) {
+                org.example.DataAccessLayer.StajDAO stajDao = new org.example.DataAccessLayer.StajDAO();
+                String stajId = stajDao.getStajIdByBasvuru(basvuruId);
+
+                // Ekranı oluşturuyoruz
+                StajDegerlendirmeEkrani degerlendirmeEkrani = new StajDegerlendirmeEkrani(stajId, ogrenci, kullanici.getId());
+
+                // KRİTİK EKLEME: Pencere kapandığında Ana Ekranı yenile
+                degerlendirmeEkrani.addWindowListener(new java.awt.event.WindowAdapter() {
+                    @Override
+                    public void windowClosed(java.awt.event.WindowEvent e) {
+                        // Tabloyu temizle ve yeniden doldur
+                        tableModel.setRowCount(0);
+                        BasvuruDAO dao = new BasvuruDAO();
+                        java.util.List<Basvuru> guncelListe = dao.tumBasvurulariGetir(); // Veritabanından taze veri çek
+
+                        if (guncelListe != null) {
+                            for (Basvuru b : guncelListe) {
+                                // Sadece işi olanları (Şirket Onaylı veya Danışmana Gönderildi) tekrar listele
+                                if (b.getDurum().equals("Şirket Onayladı") || b.getDurum().equals("Danışmana Gönderildi")) {
+                                    tableModel.addRow(new Object[]{
+                                            b.getBasvuruId(), b.getOgrenciAdSoyad(), b.getSirketAd(), b.getPozisyon(), b.getBaslangicTarihi(), b.getDurum()
+                                    });
+                                }
+                            }
+                        }
+                    }
+                });
+
+                degerlendirmeEkrani.setVisible(true);
+            } else {
+                JOptionPane.showMessageDialog(this, "Bu buton sadece 'Danışmana Gönderildi' durumundaki stajlar içindir.");
             }
         });
     }
@@ -294,72 +410,190 @@ public class AnaEkran extends JFrame {
     }
 
     private void initSirketEkrani() {
-        // --- 1. ÜST PANEL ---
-        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        topPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-        topPanel.add(new JLabel("Şirket Yetkili Paneli (" + kullanici.getAdSoyad() + ")"));
-        add(topPanel, BorderLayout.NORTH);
+        // Ana Panel
+        JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+        mainPanel.setBackground(new Color(245, 247, 250)); // Kurumsal Gri
 
-        // --- 2. ORTA PANEL (Tablo) ---
+        // --- 1. ÜST KISIM (BAŞLIK + TEK ODAKLI KART) ---
+        JPanel topContainer = new JPanel(new BorderLayout());
+        topContainer.setBackground(new Color(245, 247, 250));
+
+        // Başlık
+        JLabel welcomeLabel = new JLabel("🏢 Şirket Paneli: " + kullanici.getAdSoyad());
+        welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        welcomeLabel.setForeground(new Color(44, 62, 80));
+
+        // Alt Başlık
+        JLabel subLabel = new JLabel("Aşağıda onayınızı bekleyen staj başvuruları listelenmektedir.");
+        subLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        subLabel.setForeground(Color.GRAY);
+        subLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 15, 0));
+
+        JPanel titlePanel = new JPanel(new GridLayout(2, 1));
+        titlePanel.setBackground(new Color(245, 247, 250));
+        titlePanel.add(welcomeLabel);
+        titlePanel.add(subLabel);
+
+        topContainer.add(titlePanel, BorderLayout.WEST);
+
+        // Verileri Çek
+        BasvuruDAO dao = new BasvuruDAO();
+        java.util.List<Basvuru> sirketBasvurulari = dao.sirketBasvurulariniGetir(kullanici.getBagliSirketId());
+
+        // --- 2. ORTA KISIM (TABLO) ---
         String[] columnNames = {"ID", "Öğrenci", "Pozisyon", "Tarih", "Durum"};
+
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
         };
 
-        // Verileri Çek (Sadece bu şirkete ait olanlar)
-        BasvuruDAO dao = new BasvuruDAO();
-        // Login olurken set ettiğimiz şirket ID'sini kullanıyoruz
-        List<Basvuru> sirketBasvurulari = dao.sirketBasvurulariniGetir(kullanici.getBagliSirketId());
-
-        for (Basvuru b : sirketBasvurulari) {
-            tableModel.addRow(new Object[]{
-                    b.getBasvuruId(), b.getOgrenciAdSoyad(), b.getPozisyon(), b.getBaslangicTarihi(), b.getDurum()
-            });
+        // --- SADECE BEKLEYENLERİ FİLTRELE ---
+        int bekleyenSayisi = 0;
+        if (sirketBasvurulari != null) {
+            for (Basvuru b : sirketBasvurulari) {
+                // KRİTİK NOKTA: Sadece "Beklemede" olanları tabloya ekle
+                if (b.getDurum().equals("Beklemede")) {
+                    tableModel.addRow(new Object[]{
+                            b.getBasvuruId(), b.getOgrenciAdSoyad(), b.getPozisyon(), b.getBaslangicTarihi(), b.getDurum()
+                    });
+                    bekleyenSayisi++;
+                }
+            }
         }
 
-        table = new JTable(tableModel);
-        table.setRowHeight(25);
-        add(new JScrollPane(table), BorderLayout.CENTER);
+        // İstatistik Kartı (Sağ Tarafa)
+        JPanel cardPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        cardPanel.setBackground(new Color(245, 247, 250));
+        cardPanel.add(createStatCard("Bekleyen İşlem", String.valueOf(bekleyenSayisi), new Color(243, 156, 18), "⏳")); // Turuncu
 
-        // --- 3. ALT PANEL ---
-        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton btnIslem = new JButton("Başvuruyu Değerlendir");
-        JButton btnCikis = new JButton("Çıkış Yap");
+        topContainer.add(cardPanel, BorderLayout.EAST);
+        mainPanel.add(topContainer, BorderLayout.NORTH);
+
+        // Tablo Ayarları
+        table = new JTable(tableModel);
+        table.setRowHeight(35);
+        table.setShowVerticalLines(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
+
+        // Renklendirici (Varsa kullanır)
+        try { table.getColumnModel().getColumn(4).setCellRenderer(new StatusRenderer()); } catch (Exception e) {}
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(230, 230, 230), 1));
+        scrollPane.getViewport().setBackground(Color.WHITE);
+
+        // Tablo boşsa "İşlem Yok" yazısı gösterilebilir ama şimdilik boş tablo yeterli.
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+
+        // --- 3. ALT KISIM (BUTONLAR) ---
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 10));
+        bottomPanel.setBackground(new Color(245, 247, 250));
+
+        JButton btnIslem = new JButton("✅ Başvuruyu Onayla / Reddet");
+        JButton btnCikis = new JButton("🚪 Çıkış");
+
+        styleButton(btnIslem, new Color(39, 174, 96)); // Yeşil
+        styleButton(btnCikis, new Color(231, 76, 60)); // Kırmızı
+
         bottomPanel.add(btnIslem);
         bottomPanel.add(btnCikis);
-        add(bottomPanel, BorderLayout.SOUTH);
+
+        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
+
+        // --- EKRANI GÜNCELLE ---
+        this.setContentPane(mainPanel);
+        this.revalidate();
+        this.repaint();
 
         // --- AKSİYONLAR ---
-        btnCikis.addActionListener(e -> { this.dispose(); new LoginEkrani().setVisible(true); });
+        btnCikis.addActionListener(e -> { dispose(); new LoginEkrani().setVisible(true); });
 
+        // Değerlendirme Aksiyonu
         btnIslem.addActionListener(e -> {
             int selectedRow = table.getSelectedRow();
             if (selectedRow != -1) {
                 String basvuruId = (String) tableModel.getValueAt(selectedRow, 0);
-                String durum = (String) tableModel.getValueAt(selectedRow, 4);
+                String ogrenciAdi = (String) tableModel.getValueAt(selectedRow, 1);
 
-                if (durum.equals("Beklemede")) {
-                    Object[] options = {"Kabul Et", "Reddet", "İptal"};
-                    int secim = JOptionPane.showOptionDialog(this, "Bu staj başvurusuna şirket olarak yanıtınız nedir?",
-                            "Şirket Onayı", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE,
-                            null, options, options[0]);
+                // Durumu zaten 'Beklemede' olduğu için kontrole gerek yok (Listede sadece onlar var)
 
-                    if (secim == 0) { // Kabul Et
-                        // Durumu 'Şirket Onayladı' yapıyoruz (Danışman sonra 'Onaylandı' yapacak)
-                        if (dao.basvuruDurumGuncelle(basvuruId, "Şirket Onayladı")) {
-                            JOptionPane.showMessageDialog(this, "Başvuru kabul edildi. Danışman onayı bekleniyor.");
-                            // Tabloyu yenileme kodu eklenebilir
-                        }
-                    } else if (secim == 1) { // Reddet
-                        dao.basvuruDurumGuncelle(basvuruId, "Reddedildi");
+                Object[] options = {"Kabul Et", "Reddet", "İptal"};
+                int secim = JOptionPane.showOptionDialog(this,
+                        "Öğrenci: " + ogrenciAdi + "\nBu staj başvurusuna yanıtınız nedir?",
+                        "Şirket Onayı", JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE,
+                        null, options, options[0]);
+
+                if (secim == 0) { // Kabul Et
+                    if (dao.basvuruDurumGuncelle(basvuruId, "Şirket Onayladı")) {
+                        JOptionPane.showMessageDialog(this, "✅ Başvuru onaylandı. Listeden kaldırılıyor.");
+                        // Ekranı Yenile (Yeniden çizerek listeyi temizler)
+                        new AnaEkran(kullanici).setVisible(true); dispose();
                     }
-                } else {
-                    JOptionPane.showMessageDialog(this, "Bu başvuru zaten işlem görmüş.");
+                } else if (secim == 1) { // Reddet
+                    if(dao.basvuruDurumGuncelle(basvuruId, "Reddedildi")) {
+                        JOptionPane.showMessageDialog(this, "Başvuru reddedildi. Listeden kaldırılıyor.");
+                        // Ekranı Yenile
+                        new AnaEkran(kullanici).setVisible(true); dispose();
+                    }
                 }
             } else {
-                JOptionPane.showMessageDialog(this, "Seçim yapınız.");
+                JOptionPane.showMessageDialog(this, "Lütfen listeden işlem yapmak istediğiniz başvuruyu seçiniz.");
             }
         });
     }
+
+    // --- YARDIMCI METOD (KOD TEKRARINI ÖNLER) ---
+    private void sirketTablosunuYenile() {
+        tableModel.setRowCount(0); // Tabloyu temizle
+        BasvuruDAO dao = new BasvuruDAO();
+        // Şirket ID'sine göre güncel listeyi çek
+        java.util.List<org.example.Model.Basvuru> sirketBasvurulari = dao.sirketBasvurulariniGetir(kullanici.getBagliSirketId());
+
+        for (org.example.Model.Basvuru b : sirketBasvurulari) {
+            tableModel.addRow(new Object[]{
+                    b.getBasvuruId(), b.getOgrenciAdSoyad(), b.getPozisyon(), b.getBaslangicTarihi(), b.getDurum()
+            });
+        }
+    }
+    // Tablo Durum Sütunu Renklendirici
+    private static class StatusRenderer extends javax.swing.table.DefaultTableCellRenderer {
+        @Override
+        public java.awt.Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+            String status = (String) value;
+            setFont(new Font("Segoe UI", Font.BOLD, 12));
+            setHorizontalAlignment(CENTER);
+
+            if (status != null) {
+                if (status.contains("Onay") || status.contains("Stajda") || status.contains("Tamam")) {
+                    setForeground(new Color(46, 204, 113)); // Yeşil
+                    setBackground(new Color(235, 250, 240)); // Açık Yeşil Arkaplan
+                } else if (status.contains("Red")) {
+                    setForeground(new Color(231, 76, 60)); // Kırmızı
+                    setBackground(new Color(253, 237, 236)); // Açık Kırmızı
+                } else if (status.contains("Bekle")) {
+                    setForeground(new Color(243, 156, 18)); // Turuncu
+                    setBackground(new Color(254, 249, 231)); // Açık Turuncu
+                } else {
+                    setForeground(Color.BLACK);
+                    setBackground(Color.WHITE);
+                }
+            }
+
+            if (isSelected) {
+                setBackground(table.getSelectionBackground());
+                setForeground(table.getSelectionForeground());
+            }
+
+            // Yuvarlak kenar efekti için border (Opsiyonel)
+            setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
+            return this;
+        }
+    }
+
+
 }

@@ -1,123 +1,86 @@
 package org.example.Gui;
 
 import org.example.DataAccessLayer.DegerlendirmeDAO;
-import org.example.Model.DegerlendirilecekStaj;
-import org.example.Model.Kullanici;
-
 import javax.swing.*;
 import java.awt.*;
-import java.util.List;
 
 public class DegerlendirmeEkrani extends JFrame {
 
-    private final Kullanici kullanici;
-    private JComboBox<DegerlendirilecekStaj> cmbOgrenci; // Backend'den dolacak
+    private String stajId;
+    private String danismanId;
+    private String ogrenciAdi;
 
-    public DegerlendirmeEkrani(Kullanici kullanici) {
-        this.kullanici = kullanici;
+    // Artık yapıcı metod (Constructor) direkt hedef öğrenciyi alıyor
+    public DegerlendirmeEkrani(String stajId, String ogrenciAdi, String danismanId) {
+        this.stajId = stajId;
+        this.ogrenciAdi = ogrenciAdi;
+        this.danismanId = danismanId;
 
-        setTitle("Staj Değerlendirme Formu");
-        setSize(450, 500);
+        setTitle("Not Girişi: " + ogrenciAdi);
+        setSize(400, 450);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        // --- BAŞLIK ---
-        JLabel titleLabel = new JLabel("Staj Değerlendirme & Not Girişi", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
-        add(titleLabel, BorderLayout.NORTH);
+        // Başlık
+        JLabel lblTitle = new JLabel("Staj Değerlendirme", SwingConstants.CENTER);
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        lblTitle.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
+        add(lblTitle, BorderLayout.NORTH);
 
-        // --- FORM ---
+        // Form
         JPanel formPanel = new JPanel(new GridLayout(4, 1, 10, 10));
         formPanel.setBorder(BorderFactory.createEmptyBorder(10, 30, 10, 30));
 
-        // 1. Öğrenci Seçimi
-        formPanel.add(new JLabel("Değerlendirilecek Öğrenci Seçiniz:"));
-        cmbOgrenci = new JComboBox<>();
-        stajlariYukle(); // Metodu aşağıda çağırıyoruz
-        formPanel.add(cmbOgrenci);
+        formPanel.add(new JLabel("Öğrenci:"));
+        JTextField txtOgrenci = new JTextField(ogrenciAdi);
+        txtOgrenci.setEditable(false);
+        formPanel.add(txtOgrenci);
 
-        // 2. Puan Girişi
-        formPanel.add(new JLabel("Puan (0-100 Arası):"));
-        JSpinner spinnerPuan = new JSpinner(new SpinnerNumberModel(80, 0, 100, 1));
+        formPanel.add(new JLabel("Puan (0-100):"));
+        JSpinner spinnerPuan = new JSpinner(new SpinnerNumberModel(85, 0, 100, 1));
         formPanel.add(spinnerPuan);
 
-        // 3. Yorum Alanı
-        JPanel yorumPanel = new JPanel(new BorderLayout());
-        yorumPanel.setBorder(BorderFactory.createEmptyBorder(0, 30, 0, 30));
-        yorumPanel.add(new JLabel("Danışman Görüşü / Yorum:"), BorderLayout.NORTH);
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.add(formPanel, BorderLayout.NORTH);
 
+        // Yorum
+        JPanel yorumPanel = new JPanel(new BorderLayout());
+        yorumPanel.setBorder(BorderFactory.createEmptyBorder(10, 30, 10, 30));
+        yorumPanel.add(new JLabel("Yorum / Görüş:"), BorderLayout.NORTH);
         JTextArea txtYorum = new JTextArea(5, 20);
         txtYorum.setLineWrap(true);
-        JScrollPane scrollYorum = new JScrollPane(txtYorum);
-        yorumPanel.add(scrollYorum, BorderLayout.CENTER);
+        yorumPanel.add(new JScrollPane(txtYorum), BorderLayout.CENTER);
 
-        // Panelleri birleştir
-        JPanel centerContainer = new JPanel(new BorderLayout());
-        centerContainer.add(formPanel, BorderLayout.NORTH);
-        centerContainer.add(yorumPanel, BorderLayout.CENTER);
+        centerPanel.add(yorumPanel, BorderLayout.CENTER);
+        add(centerPanel, BorderLayout.CENTER);
 
-        add(centerContainer, BorderLayout.CENTER);
+        // Buton
+        JPanel btnPanel = new JPanel(new FlowLayout());
+        JButton btnKaydet = new JButton("Kaydet ve Stajı Bitir");
+        btnKaydet.setBackground(new Color(46, 204, 113));
+        btnKaydet.setForeground(Color.WHITE);
 
-        // --- BUTONLAR ---
-        JPanel bottomPanel = new JPanel(new FlowLayout());
-        bottomPanel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
+        btnPanel.add(btnKaydet);
+        add(btnPanel, BorderLayout.SOUTH);
 
-        JButton btnKaydet = new JButton("Notu Kaydet");
-        JButton btnIptal = new JButton("İptal");
-
-        bottomPanel.add(btnKaydet);
-        bottomPanel.add(btnIptal);
-
-        add(bottomPanel, BorderLayout.SOUTH);
-
-        // --- AKSİYONLAR ---
-        btnIptal.addActionListener(e -> this.dispose());
-
+        // Aksiyon
         btnKaydet.addActionListener(e -> {
-            DegerlendirilecekStaj secilen = (DegerlendirilecekStaj) cmbOgrenci.getSelectedItem();
-
-            if (secilen == null || secilen.getStajId().equals("0")) {
-                JOptionPane.showMessageDialog(this, "Lütfen listeden geçerli bir öğrenci seçiniz.");
-                return;
-            }
-
             int puan = (int) spinnerPuan.getValue();
             String yorum = txtYorum.getText();
 
-            if(yorum.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Lütfen bir yorum giriniz!", "Eksik Bilgi", JOptionPane.WARNING_MESSAGE);
+            if (yorum.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Lütfen yorum giriniz.");
                 return;
             }
 
-            // Backend'e Gönder
             DegerlendirmeDAO dao = new DegerlendirmeDAO();
-            boolean sonuc = dao.degerlendirmeEkle(secilen.getStajId(), kullanici.getId(), puan, yorum);
-
-            if (sonuc) {
-                JOptionPane.showMessageDialog(this,
-                        "Değerlendirme Başarıyla Kaydedildi!\nÖğrenci: " + secilen,
-                        "Başarılı", JOptionPane.INFORMATION_MESSAGE);
-                this.dispose();
+            if (dao.degerlendirmeEkle(stajId, danismanId, puan, yorum)) {
+                JOptionPane.showMessageDialog(this, "Not kaydedildi. Staj 'Tamamlandı' durumuna geçti.");
+                this.dispose(); // Pencereyi kapat
             } else {
-                JOptionPane.showMessageDialog(this, "Kaydedilirken hata oluştu!", "Hata", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Hata oluştu.");
             }
         });
-    }
-
-    // Veritabanındaki Danışmana ait stajları yükle
-    private void stajlariYukle() {
-        DegerlendirmeDAO dao = new DegerlendirmeDAO();
-        List<DegerlendirilecekStaj> stajlar = dao.getDanismanStajlari(kullanici.getId());
-
-        for (DegerlendirilecekStaj s : stajlar) {
-            cmbOgrenci.addItem(s);
-        }
-
-        if (stajlar.isEmpty()) {
-            cmbOgrenci.addItem(new DegerlendirilecekStaj("0", "Değerlendirilecek Staj Yok", "-"));
-            cmbOgrenci.setEnabled(false);
-        }
     }
 }

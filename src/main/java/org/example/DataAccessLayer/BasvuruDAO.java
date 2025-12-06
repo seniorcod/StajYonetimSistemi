@@ -69,35 +69,31 @@ public class BasvuruDAO {
         }
     }
     // Yeni Başvuru Ekleme Metodu
-    public boolean basvuruEkle(String ogrenciId, String sirketId, String pozisyon, String baslangic, String bitis) {
-        String sql = "INSERT INTO public.basvuru (basvuruid, ogrenciid, sirketid, pozisyon, planlananbaslangic, planlananbitis, durum, basvurutarihi) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    // 1. GÜNCELLENMİŞ KAYIT METODU (Danışman ID parametresi eklendi)
+    public boolean basvuruEkle(String ogrenciId, String sirketId, String danismanId, String pozisyon, String baslangic, String bitis) {
+        // SQL'e 'danismanid' eklendi
+        String sql = "INSERT INTO public.basvuru (basvuruid, ogrenciid, sirketid, danismanid, pozisyon, planlananbaslangic, planlananbitis, durum, basvurutarihi) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DbHelper.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            // 1. ID Oluşturma (BAS + Rastgele Sayı)
-            String yeniId = "BAS" + (int)(Math.random() * 10000);
+            String yeniId = "BAS" + (int)(Math.random() * 100000);
 
             ps.setString(1, yeniId);
             ps.setString(2, ogrenciId);
             ps.setString(3, sirketId);
-            ps.setString(4, pozisyon);
-
-            // Tarih Çevirme (String -> SQL Date)
-            ps.setDate(5, java.sql.Date.valueOf(baslangic));
-            ps.setDate(6, java.sql.Date.valueOf(bitis));
-
-            ps.setString(7, "Beklemede"); // İlk kayıt her zaman 'Beklemede' olur
-            ps.setTimestamp(8, new java.sql.Timestamp(System.currentTimeMillis())); // Şu anki zaman
+            ps.setString(4, danismanId); // <-- YENİ EKLENEN KISIM
+            ps.setString(5, pozisyon);
+            ps.setDate(6, java.sql.Date.valueOf(baslangic));
+            ps.setDate(7, java.sql.Date.valueOf(bitis));
+            ps.setString(8, "Beklemede");
+            ps.setTimestamp(9, new java.sql.Timestamp(System.currentTimeMillis()));
 
             return ps.executeUpdate() > 0;
 
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
-        } catch (IllegalArgumentException e) {
-            System.out.println("Tarih formatı hatası!");
             return false;
         }
     }
@@ -125,6 +121,35 @@ public class BasvuruDAO {
                 String durum = rs.getString("durum") != null ? rs.getString("durum").trim() : "";
                 Date tarih = rs.getDate("planlananbaslangic");
                 liste.add(new Basvuru(id, ogrenciAd, sirketAd, pozisyon, durum, tarih));
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return liste;
+    }
+    // 2. YENİ METOD: Sadece belirli bir danışmana ait başvuruları getir
+    public List<org.example.Model.Basvuru> getBasvurularByDanisman(String danismanId) {
+        List<org.example.Model.Basvuru> liste = new ArrayList<>();
+        // WHERE şartına dikkat: b.danismanid = ?
+        String sql = "SELECT b.basvuruid, o.ad || ' ' || o.soyad as ogrenci_tam_ad, s.sirketad, b.pozisyon, b.durum, b.planlananbaslangic " +
+                "FROM public.basvuru b " +
+                "JOIN public.ogrenciler o ON b.ogrenciid = o.ogrenciid " +
+                "JOIN public.sirketler s ON b.sirketid = s.sirketid " +
+                "WHERE b.danismanid = ?";
+
+        try (Connection conn = DbHelper.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, danismanId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                // Verileri listeye ekleme (Standart kod)
+                String id = rs.getString("basvuruid");
+                String ogrAd = rs.getString("ogrenci_tam_ad");
+                String sirket = rs.getString("sirketad");
+                String poz = rs.getString("pozisyon");
+                String dur = rs.getString("durum");
+                Date tar = rs.getDate("planlananbaslangic");
+                liste.add(new org.example.Model.Basvuru(id, ogrAd, sirket, poz, dur, tar));
             }
         } catch (SQLException e) { e.printStackTrace(); }
         return liste;
