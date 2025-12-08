@@ -53,7 +53,7 @@ public class DanismanRaporEkrani extends JFrame {
         centerPanel.add(scroll, BorderLayout.CENTER);
         add(centerPanel, BorderLayout.CENTER);
 
-        // --- ALT: NOT VERME ALANI ---
+        // --- ALT: NOT VERME ALANI ----
         JPanel bottomPanel = new JPanel();
         bottomPanel.setLayout(new BoxLayout(bottomPanel, BoxLayout.Y_AXIS));
         bottomPanel.setBorder(new EmptyBorder(20, 20, 20, 20));

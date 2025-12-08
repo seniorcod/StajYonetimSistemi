@@ -156,7 +156,7 @@ public class IstatistikEkrani extends JFrame {
             }
         } catch (Exception e) {}
 
-        // İkonu yukarı hizalamak için ayrı bir panele koyalım
+        // İkonu yukarı hizalamak için ayrı bir panele koyalım-
         JPanel iconPanel = new JPanel(new BorderLayout());
         iconPanel.setOpaque(false);
         iconPanel.add(lblIcon, BorderLayout.NORTH);

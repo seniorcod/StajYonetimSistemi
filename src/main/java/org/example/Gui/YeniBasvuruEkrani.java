@@ -211,7 +211,7 @@ public class YeniBasvuruEkrani extends JFrame {
         });
     }
 
-    // --- YARDIMCI METODLAR ---
+    // --- YARDIMCI METODLAR ----
     private void addLabel(JPanel panel, String text, int x, int y) {
         JLabel lbl = new JLabel(text);
         lbl.setFont(new Font("SansSerif", Font.BOLD, 12));

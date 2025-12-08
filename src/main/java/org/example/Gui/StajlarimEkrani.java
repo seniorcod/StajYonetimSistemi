@@ -212,7 +212,7 @@ public class StajlarimEkrani extends JFrame {
         pnl.setBackground(Color.WHITE);
         pnl.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200), 1));
 
-        // -- KAPAT BUTONU (X) --
+        // -- KAPAT BUTONU (X) ---
         JLabel lblClose = new JLabel("X");
         lblClose.setFont(new Font("SansSerif", Font.BOLD, 20));
         lblClose.setForeground(Color.GRAY);

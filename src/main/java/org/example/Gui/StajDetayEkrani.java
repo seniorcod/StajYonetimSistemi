@@ -76,7 +76,7 @@ public class StajDetayEkrani extends JFrame {
         bottom.add(btnYukle);
         add(bottom, BorderLayout.SOUTH);
 
-        // --- AKSİYON: Rapor Yükleme ---
+        // --- AKSİYON: Rapor Yükleme ----
         btnYukle.addActionListener(e -> {
             String[] raporTipleri = {"Ara Rapor 1", "Ara Rapor 2", "Final Raporu"};
             String secilenTip = (String) JOptionPane.showInputDialog(this, "Rapor Tipi Seçiniz:", "Rapor Yükle",

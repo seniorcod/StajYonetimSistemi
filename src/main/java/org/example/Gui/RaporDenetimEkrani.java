@@ -24,7 +24,7 @@ public class RaporDenetimEkrani extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        // --- BAŞLIK ---
+        // --- BAŞLIK ----
         JLabel lblBaslik = new JLabel(ogrenciAdi + " - Yüklenen Raporlar", SwingConstants.CENTER);
         lblBaslik.setFont(new Font("Segoe UI", Font.BOLD, 16));
         lblBaslik.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));

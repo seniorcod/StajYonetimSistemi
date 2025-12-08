@@ -34,7 +34,7 @@ public class Main {
                 System.err.println("Tema yüklenirken hata oluştu, varsayılan tema kullanılıyor.");
             }
 
-            // 3. UYGULAMAYI BAŞLAT
+            // 3. UYGULAMAYI BAŞLAT-
             // Artık konsol testi yok, direkt Login Ekranı açılıyor.
             LoginEkrani loginEkrani = new LoginEkrani();
             loginEkrani.setVisible(true);

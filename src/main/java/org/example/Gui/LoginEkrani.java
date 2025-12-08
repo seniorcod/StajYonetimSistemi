@@ -245,7 +245,7 @@ public class LoginEkrani extends JFrame {
     public static void main(String[] args) {
         try {
             FlatLightLaf.setup();
-            // Global yuvarlaklık ayarları (Fallback olarak)
+            // Global yuvarlaklık ayarları (Fallback olarak)-
             UIManager.put("Button.arc", 999);
             UIManager.put("Component.arc", 999);
             UIManager.put("TextComponent.arc", 999);

@@ -10,7 +10,7 @@ public class DegerlendirmeEkrani extends JFrame {
     private String danismanId;
     private String ogrenciAdi;
 
-    // Artık yapıcı metod (Constructor) direkt hedef öğrenciyi alıyor
+    // Artık yapıcı metod (Constructor) direkt hedef öğrenciyi alıyor-
     public DegerlendirmeEkrani(String stajId, String ogrenciAdi, String danismanId) {
         this.stajId = stajId;
         this.ogrenciAdi = ogrenciAdi;

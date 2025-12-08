@@ -89,7 +89,7 @@ public class AnaEkran extends JFrame {
         cardsPanel.add(createModernCard("Aktif / Onaylı", String.valueOf(onayli), SUCCESS_COLOR, "rocket.png"));
         cardsPanel.add(createModernCard("İşlem Bekleyen", String.valueOf(bekleyen), WARNING_COLOR, "clock.png"));
 
-        // Kart Yüksekliği Küçüldü (100px)
+        // Kart Yüksekliği Küçüldüü (100px)
         cardsPanel.setMaximumSize(new Dimension(2000, 100));
         cardsPanel.setPreferredSize(new Dimension(800, 100));
 

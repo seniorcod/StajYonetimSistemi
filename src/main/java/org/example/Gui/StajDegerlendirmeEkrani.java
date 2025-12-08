@@ -297,7 +297,7 @@ public class StajDegerlendirmeEkrani extends JFrame {
         dialog.setVisible(true);
     }
 
-    // --- YARDIMCI METODLAR ---
+    // --- YARDIMCI METODLAR ----
     private void raporlariYukle() {
         tableModel.setRowCount(0);
         RaporDAO dao = new RaporDAO();
